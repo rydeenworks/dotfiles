@@ -59,8 +59,16 @@ create_link() {
 }
 
 echo "Creating symlinks..."
-create_link "$DOTFILES_DIR/.config/nushell/config.nu" "$HOME/.config/nushell/config.nu"
-create_link "$DOTFILES_DIR/.config/nushell/env.nu"    "$HOME/.config/nushell/env.nu"
+
+# Nushell config dir differs by OS
+if [ "$OS" = "macos" ]; then
+    NU_CONFIG_DIR="$HOME/Library/Application Support/nushell"
+else
+    NU_CONFIG_DIR="$HOME/.config/nushell"
+fi
+
+create_link "$DOTFILES_DIR/.config/nushell/config.nu" "$NU_CONFIG_DIR/config.nu"
+create_link "$DOTFILES_DIR/.config/nushell/env.nu"    "$NU_CONFIG_DIR/env.nu"
 create_link "$DOTFILES_DIR/.config/starship.toml"     "$HOME/.config/starship.toml"
 
 # ============================================================

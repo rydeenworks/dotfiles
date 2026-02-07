@@ -54,9 +54,12 @@ fzf          ファジーファインダー
 delta        diffビューア
 
 
-ターミナルエミュレータについて
-----------------------------
-ターミナルは各OS毎に管理する。このリポジトリには含めない。
+備考
+----
+Nushell config ディレクトリはOSにより異なる。install.sh が自動判定する。
+  macOS   ~/Library/Application Support/nushell/
+  Linux   ~/.config/nushell/
 
-macOS   iTerm2
-Windows Windows Terminal
+ターミナルエミュレータは各OS毎に管理する。このリポジトリには含めない。
+  macOS   iTerm2
+  Windows Windows Terminal
