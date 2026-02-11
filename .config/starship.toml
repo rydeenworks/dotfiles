@@ -6,7 +6,6 @@ $python\
 $nodejs\
 $rust\
 $golang\
-$nix_shell\
 $cmd_duration\
 $line_break\
 $character"""
@@ -37,10 +36,6 @@ format = "[$symbol$version]($style) "
 [golang]
 symbol = " "
 format = "[$symbol$version]($style) "
-
-[nix_shell]
-symbol = " "
-format = "[$symbol$state]($style) "
 
 [cmd_duration]
 min_time = 2_000

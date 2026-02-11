@@ -1,45 +1,55 @@
-#!/usr/bin/env bash
+#!/bin/bash
 set -euo pipefail
+
+# macOS dotfiles setup script
 
 DOTFILES_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # ============================================================
-# OS Detection
+# Require macOS
 # ============================================================
-detect_os() {
-    case "$(uname -s)" in
-        Darwin) echo "macos" ;;
-        Linux)
-            if grep -qi microsoft /proc/version 2>/dev/null; then
-                echo "wsl"
-            else
-                echo "linux"
-            fi
-            ;;
-        *) echo "unknown" ;;
-    esac
-}
-
-OS=$(detect_os)
-echo "Detected OS: $OS"
-
-# ============================================================
-# Install devbox (if not present)
-# ============================================================
-if ! command -v devbox &>/dev/null; then
-    echo "Installing devbox..."
-    curl -fsSL https://get.jetify.com/devbox | bash
+if [ "$(uname -s)" != "Darwin" ]; then
+    echo "Error: This script is for macOS only."
+    exit 1
 fi
 
 # ============================================================
-# devbox global install
+# Install Homebrew (if not present)
 # ============================================================
-echo "Installing devbox global packages..."
-cp "$DOTFILES_DIR/devbox.json" "$HOME/.local/share/devbox/global/default/devbox.json" 2>/dev/null || {
-    devbox global init
-    cp "$DOTFILES_DIR/devbox.json" "$(devbox global path)/devbox.json"
-}
-devbox global install
+if ! command -v brew &>/dev/null; then
+    echo "Installing Homebrew..."
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+fi
+
+# ============================================================
+# Install packages via Brewfile
+# ============================================================
+echo "Installing Homebrew packages..."
+brew bundle --file="$DOTFILES_DIR/Brewfile"
+
+# ============================================================
+# Install Oh My Zsh (if not present)
+# ============================================================
+if [ ! -d "$HOME/.oh-my-zsh" ]; then
+    echo "Installing Oh My Zsh..."
+    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+fi
+
+# ============================================================
+# Install zsh plugins for Oh My Zsh
+# ============================================================
+ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
+
+if [ ! -d "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" ]; then
+    echo "Installing zsh-syntax-highlighting plugin..."
+    git clone https://github.com/zsh-users/zsh-syntax-highlighting.git "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
+fi
+
+if [ ! -d "$ZSH_CUSTOM/plugins/zsh-completions" ]; then
+    echo "Installing zsh-completions plugin..."
+    git clone https://github.com/zsh-users/zsh-completions.git "$ZSH_CUSTOM/plugins/zsh-completions"
+fi
 
 # ============================================================
 # Symlinks
@@ -59,17 +69,11 @@ create_link() {
 }
 
 echo "Creating symlinks..."
-
-# Nushell config dir differs by OS
-if [ "$OS" = "macos" ]; then
-    NU_CONFIG_DIR="$HOME/Library/Application Support/nushell"
-else
-    NU_CONFIG_DIR="$HOME/.config/nushell"
-fi
-
-create_link "$DOTFILES_DIR/.config/nushell/config.nu" "$NU_CONFIG_DIR/config.nu"
-create_link "$DOTFILES_DIR/.config/nushell/env.nu"    "$NU_CONFIG_DIR/env.nu"
-create_link "$DOTFILES_DIR/.config/starship.toml"     "$HOME/.config/starship.toml"
+create_link "$DOTFILES_DIR/.zshrc"               "$HOME/.zshrc"
+create_link "$DOTFILES_DIR/.zprofile"             "$HOME/.zprofile"
+create_link "$DOTFILES_DIR/.zshenv"               "$HOME/.zshenv"
+create_link "$DOTFILES_DIR/.gitconfig"            "$HOME/.gitconfig"
+create_link "$DOTFILES_DIR/.config/starship.toml" "$HOME/.config/starship.toml"
 
 # ============================================================
 # ghq root directory
@@ -77,21 +81,20 @@ create_link "$DOTFILES_DIR/.config/starship.toml"     "$HOME/.config/starship.to
 mkdir -p "$HOME/ghq"
 
 # ============================================================
-# Set Nushell as default shell (optional, prompt user)
+# Set zsh as default shell
 # ============================================================
-NUSHELL_PATH="$(which nu 2>/dev/null || echo "")"
-if [ -n "$NUSHELL_PATH" ]; then
-    echo ""
-    read -p "Set Nushell ($NUSHELL_PATH) as default shell? [y/N] " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        if ! grep -q "$NUSHELL_PATH" /etc/shells; then
-            echo "$NUSHELL_PATH" | sudo tee -a /etc/shells
-        fi
-        chsh -s "$NUSHELL_PATH"
-        echo "Default shell changed to Nushell."
+ZSH_PATH="$(which zsh)"
+if [ "$SHELL" != "$ZSH_PATH" ]; then
+    echo "Setting zsh as default shell..."
+    if ! grep -q "$ZSH_PATH" /etc/shells; then
+        echo "$ZSH_PATH" | sudo tee -a /etc/shells
     fi
+    chsh -s "$ZSH_PATH"
 fi
 
 echo ""
-echo "Done! Start a new shell or run: exec nu"
+echo "Done! Restart your terminal to apply changes."
+echo ""
+echo "Manual steps:"
+echo "  1. Open iTerm2 > Profiles > Other Actions > Import JSON Profiles"
+echo "     Import: $DOTFILES_DIR/iterm2/profile.json"
